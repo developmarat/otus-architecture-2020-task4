@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: task4-grafana-dashboards
+  name: task4-grafana-dashboard
   labels:
     grafana_dashboard: "1"
 data:
-  grafana-myapp-dashboard.json: |-
+  task4-grafana-dashboard.json: |-
     {
       "annotations": {
         "list": [
