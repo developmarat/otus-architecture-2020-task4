@@ -1,0 +1,156 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: task4-stresstest
+spec:
+  template:
+    metadata:
+      name: task4-stresstest
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: task4-stresstest-job
+          env:
+            - name: APPLICATION_INGRESS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: task4-config
+                  key: APPLICATION_INGRESS_HOST
+            - name: APPLICATION_HOST_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: task4-config
+                  key: APPLICATION_HOST_NAME
+          image: curlimages/curl:latest
+          command:
+            - sh
+            - "-c"
+            - |
+              baseUrl="$APPLICATION_INGRESS_HOST";
+              hostname="$APPLICATION_HOST_NAME";
+              countRequestsInIteration=15;
+              sleepTime=1;
+              startIndexInDb=0;
+              createIndex=$startIndexInDb;
+              getIndex=$startIndexInDb;
+              updateIndex=$startIndexInDb;
+              deleteIndex=$startIndexInDb;
+
+              userData(){
+                  cat <<EOF
+                  {
+                    "username": "user1",
+                    "firstName": "Ivan",
+                    "lastName": "Ivanov",
+                    "email": "ivan@mail.ru",
+                    "phone": "+7911-333-22-11"
+                }
+              EOF
+              }
+
+              function waitApplicationIsReady(){
+                until curl -s --head -H "Host: $hostname" "$baseUrl/health" | head -n 1 | grep "HTTP/1.[01] [23]..";
+                do
+                  echo waiting application ready; sleep 2;
+                done;
+              }
+
+              function create(){
+                curl -i \
+                  -H "Host: $hostname" \
+                  -H "Accept: application/json" \
+                  -H "Content-Type:application/json" \
+                  -X POST --data "$(userData)" "$baseUrl/user";
+                createIndex=$((createIndex+1));
+              }
+
+              function get(){
+                if [ $getIndex -lt $createIndex ]
+                then
+                  getIndex=$((getIndex+1));
+                fi
+
+                curl -H "Host: $hostname" "$baseUrl/user/$getIndex";
+              }
+
+              function update(){
+                if [ $updateIndex -lt $getIndex ]
+                then
+                  updateIndex=$((updateIndex+1));
+                fi
+
+                curl -i \
+                  -H "Host: $hostname" \
+                  -H "Accept: application/json" \
+                  -H "Content-Type:application/json" \
+                  -X PUT --data "$(userData)" "$baseUrl/user/$updateIndex";
+              }
+
+              function delete(){
+                if [ $deleteIndex -lt $((updateIndex-1)) ]
+                then
+                  deleteIndex=$((deleteIndex+1));
+                fi
+
+                curl -H "Host: $hostname" -X DELETE "$baseUrl/user/$deleteIndex";
+              }
+
+              function createTask(){
+                indexC=0;
+                while true;
+                do
+                  indexC=$((indexC+1));
+                  create;
+                  if [ $indexC -ge $countRequestsInIteration ]
+                  then
+                    indexC=0;
+                    sleep $sleepTime;
+                  fi
+                done;
+              }
+
+              function getTask(){
+                indexG=0;
+                while true;
+                do
+                  indexG=$((indexG+1));
+                  get;
+                  if [ $indexG -ge $countRequestsInIteration ]
+                  then
+                    indexG=0;
+                    sleep $sleepTime;
+                  fi
+                done;
+              }
+
+              function updateTask(){
+                indexU=0;
+                while true;
+                do
+                  indexU=$((indexU+1));
+                  update;
+                  if [ $indexU -ge $countRequestsInIteration ]
+                  then
+                    indexU=0;
+                    sleep $sleepTime;
+                  fi
+                done;
+              }
+
+              function deleteTask(){
+                indexD=0;
+                while true;
+                do
+                  indexD=$((indexD+1));
+                  delete;
+                  if [ $indexD -ge $countRequestsInIteration ]
+                  then
+                    indexD=0;
+                    sleep $sleepTime;
+                  fi
+                done;
+              }
+
+              waitApplicationIsReady;
+              createTask & getTask & updateTask & deleteTask;
+  backoffLimit: 0

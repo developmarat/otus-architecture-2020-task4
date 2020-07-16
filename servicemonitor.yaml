@@ -1,0 +1,14 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: task4-servicemonitor
+  labels:
+    app: task4-app
+spec:
+  selector:
+    matchLabels:
+      app: task4-app
+  endpoints:
+    - interval: 15s
+      port: web
+      path: /actuator/prometheus

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: task4-config
+data:
+  DATABASE_HOST: postgres
+  DATABASE_USER: myuser
+  DATABASE_DB: myapp
+  APPLICATION_INGRESS_HOST: nginx-nginx-ingress-controller/otusapp
+  APPLICATION_HOST_NAME: arch.homework
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: task4-secret
+type: Opaque
+data:
+  DATABASE_PASSWORD: cGFzc3dk
+  DATABASE_PASSWORD_WITH_NEW_LINE: cGFzc3dkCg==
